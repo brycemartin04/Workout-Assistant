@@ -32,15 +32,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Workouts',
-          tabBarIcon: ({ color }) => <MaterialIcons name="insert-chart" size={24} color={color} />
+          title: 'Log Workout',
+          tabBarIcon: ({ color }) => <FontAwesome6 name="dumbbell" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="logWorkout"
+        name="help"
         options={{
-          title: 'Log Workout',
-          tabBarIcon: ({ color }) => <FontAwesome6 name="dumbbell" size={22} color={color} />,
+          title: 'Learn',
+          tabBarIcon: ({ color }) => <MaterialIcons name="library-books" size={24} color={color} />
         }}
       />
       <Tabs.Screen

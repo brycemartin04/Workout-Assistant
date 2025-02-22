@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
-import { View, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { getWorkouts, saveWorkouts } from '@/utils/storage';
@@ -74,7 +74,7 @@ export default function ModalScreen() {
   const addSetToExercise = (exerciseKey) => {
     const updated = exercises.map(exercise => {
       if (exercise.key === exerciseKey) {
-        const newSet = { key: generateUniqueKey(), reps: 0, weight: 0 };
+        const newSet = { key: generateUniqueKey(), reps: '', weight: '' };
         return { ...exercise, sets: [...exercise.sets, newSet] };
       }
       return exercise;
@@ -111,21 +111,35 @@ export default function ModalScreen() {
   const deleteWorkout = async () => {
     if (!key) return; // Only allow deleting if editing an existing workout
   
-    const updatedWorkouts = workouts.filter(w => w.key !== key);
-    setWorkouts(updatedWorkouts);
-    await saveWorkouts(updatedWorkouts);
-    router.back(); // Go back to the previous screen
+    Alert.alert(
+      "Delete Workout",
+      "Are you sure you want to delete this workout session?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const updatedWorkouts = workouts.filter(w => w.key !== key);
+            setWorkouts(updatedWorkouts);
+            await saveWorkouts(updatedWorkouts);
+            router.back(); // Go back to the previous screen
+          }
+        }
+      ]
+    );
   };
 
   // Save the workout (either update an existing one or add a new one)
   const saveWorkout = async () => {
-    if (!workoutName) return; // Validate that the workout has a name
-
+    const originalWorkout =workouts.find(w => w.key === key)
+    
     // Build the new workout object
     const newWorkout = {
       key: key || Date.now().toString(),
-      name: workoutName,
-      date: new Date().toISOString().split('T')[0],
+      name: workoutName || 'New Training Session',
+      date: originalWorkout.date,
+      time: originalWorkout.time,
       exercises: exercises.map(ex => ({
         ...ex,
         sets: ex.sets.map(s => ({
@@ -158,6 +172,7 @@ export default function ModalScreen() {
           value={workoutName}
           onChangeText={setWorkoutName}
           placeholder="Session Name"
+          autoFocus={workoutName === ''}
         />
       </ThemedView>
 
@@ -168,12 +183,12 @@ export default function ModalScreen() {
               style={styles.nameInput}
               value={exercise.name}
               onChangeText={(text) => updateExerciseName(exercise.key, text)}
-              placeholder="Exercise Name"
+              placeholder="Add Exercise Name"
             />
-            <TouchableOpacity onPress={() => toggleExerciseCollapse(exercise.key)}>
+            <TouchableOpacity onPress={() => toggleExerciseCollapse(exercise.key)} style={{marginBottom: 10}}>
               <FontAwesome
                 name={collapsedExercises[exercise.key] ? "angle-down" : "angle-up"}
-                size={24}
+                size={30}
                 color="#007AFF"
               />
             </TouchableOpacity>
@@ -182,14 +197,14 @@ export default function ModalScreen() {
             <>
               <View style={styles.setContainer}>
                 <ThemedText>Set</ThemedText>
-                <ThemedText>Weight</ThemedText>
                 <ThemedText>Reps</ThemedText>
+                <ThemedText>Weight</ThemedText>
                 <ThemedText>Remove</ThemedText>
               </View>
               {exercise.sets.map((set, setIdx) => (
                 <View key={set.key} style={styles.setContainer}>
                   <View style={styles.set}>
-                    <ThemedText>{setIdx + 1}</ThemedText>
+                    <ThemedText style={{fontSize: 18}}>{setIdx + 1}</ThemedText>
                   </View>
                   <TextInput
                     style={[styles.input, styles.setInput]}
@@ -214,11 +229,17 @@ export default function ModalScreen() {
                   </TouchableOpacity>
                 </View>
               ))}
+              <View style={{flexDirection: 'row', flex: 1,}}>
+              <TouchableOpacity onPress={() => removeExercise(exercise.key)} style={{ alignSelf: 'flex-start' }}>
+              <FontAwesome name="trash" size={25} color="#555" />
+            </TouchableOpacity>
               <TouchableOpacity style={styles.setButton} onPress={() => addSetToExercise(exercise.key)}>
                 <ThemedView style={styles.addSet}>
-                  <ThemedText style={styles.addSetTxt}>Add Set</ThemedText>
+                  <ThemedText style={styles.addSetTxt}>+ Add Set</ThemedText>
                 </ThemedView>
               </TouchableOpacity>
+              </View>
+              
             </>
           )}
         </ThemedView>
@@ -226,15 +247,19 @@ export default function ModalScreen() {
 
       <TouchableOpacity style={styles.exerciseButton} onPress={addExercise}>
         <ThemedView style={styles.addExercise}>
-          <ThemedText style={styles.addExerciseTxt}>Add Exercise</ThemedText>
+          <ThemedText style={styles.addExerciseTxt}>+ Add Exercise</ThemedText>
         </ThemedView>
       </TouchableOpacity>
 
-      <Button title={key ? 'Save Changes' : 'Add Workout'} onPress={saveWorkout} />
-      <Button title="Close" onPress={() => router.back()} />
+      {/* <Button title="Close" onPress={() => router.back()} /> */}
+      <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
+        <ThemedView style={styles.save}>
+          {key && <ThemedText style={styles.saveTxt}>Save Changes</ThemedText>}
+        </ThemedView>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.deleteButton} onPress={deleteWorkout}>
         <ThemedView style={styles.delete}>
-          {key && <ThemedText style={styles.startTxt}>Delete Session</ThemedText>}
+          {key && <ThemedText style={styles.deleteTxt}>Delete Workout</ThemedText>}
         </ThemedView>
       </TouchableOpacity>
     </ScrollView>
@@ -250,7 +275,7 @@ const styles = StyleSheet.create({
   nameView: {
     alignItems: 'center',
     width: '100%',
-    marginBottom: 5,
+    marginBottom: 20,
     padding: 5,
     borderWidth: 1,
     borderColor: '#ddd',
@@ -287,6 +312,7 @@ const styles = StyleSheet.create({
     padding: 5,
     marginBottom: 10,
     flex: 1,
+    color: "#007bff"
   },
   setContainer: {
     flexDirection: 'row',
@@ -303,18 +329,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#ccc',
     padding: 5,
+    fontSize: 18
   },
   setInput: {
     width: '30%',
   },
   setButton: {
-    width: '40%',
-    alignSelf: 'center',
+    width: '100%',
+    
   },
   addSet: {
-    backgroundColor: 'rgb(106, 185, 255)',
-    paddingVertical: 3,
-    paddingHorizontal: 5,
+    backgroundColor: 'rgba(85,85,85,.3)',
+    alignSelf: 'center',
+    right: 20,
+    paddingVertical: 1,
+    paddingHorizontal: 20,
     borderRadius: 10,
     alignItems: 'center',
     shadowColor: '#000',
@@ -324,9 +353,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   addSetTxt: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#fff',
-    fontWeight: 'bold',
   },
   exerciseButton: {
     width: '100%',
@@ -346,13 +374,13 @@ const styles = StyleSheet.create({
     color: '#555',
     fontWeight: 'bold',
   },
-  deleteButton: {
+  saveButton: {
     width: '80%',
     marginTop: 'auto',
-    marginBottom: 30,
+    marginBottom: 15,
   },
-  delete: {
-    backgroundColor: '#EE0606',
+  save: {
+    backgroundColor: '#007bff',
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 10,
@@ -363,8 +391,29 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
-  startTxt: {
+  saveTxt: {
     fontSize: 20,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    width: '40%',
+    marginBottom: 30,
+  },
+  delete: {
+    backgroundColor: 'rgba(255, 0, 0, 0.5)',
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  deleteTxt: {
+    fontSize: 15,
     color: '#fff',
     fontWeight: 'bold',
   },
