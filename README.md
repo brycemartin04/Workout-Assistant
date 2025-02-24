@@ -24,6 +24,7 @@ Workout Assistant is a mobile application designed to help users track their wor
 - Enhanced AI model for better workout suggestions
 - UI/UX improvements for a seamless user experience
 
+## 
 ![Workout Assistant in Action](Workout-Assistant/assets/MyMovie-ezgif.com-crop.gif) 
 <img src="Workout-Assistant/assets/IMG_9411.PNG" width="400"> <img src="Workout-Assistant/assets/IMG_9412.PNG" width="400"> <img src="Workout-Assistant/assets/IMG_9413.PNG" width="400">
 
