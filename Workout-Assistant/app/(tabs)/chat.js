@@ -33,6 +33,7 @@ const ChatPage = () => {
   const [conversationModalVisible, setConversationModalVisible] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState(null);
   
+  const IP_ADDRESS = 'localhost' //import custom ip here
 
    useFocusEffect(
         useCallback(() => {
@@ -80,7 +81,7 @@ const ChatPage = () => {
         history: conversationHistory,
       };
       // Replace with your backend URL (using your local IP if testing on a physical device)
-      const response = await fetch('http://10.0.0.25:3000/chat', {
+      const response = await fetch('http://{IP_ADDRESS}:3000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
