@@ -1,10 +1,10 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { Calendar } from 'react-native-calendars';
-import { useColorScheme, Text, StyleSheet, Alert, TouchableOpacity, Platform, View, Modal } from 'react-native';
+import { useColorScheme, Text, StyleSheet, TouchableOpacity, View, Modal, ScrollView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 
-const WorkoutCalendar = ({ workoutData = [], setWorkouts, saveWorkouts,  }) => {
+const WorkoutCalendar = ({ workoutData = [], setWorkouts, saveWorkouts }) => {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState('');
@@ -24,7 +24,7 @@ const WorkoutCalendar = ({ workoutData = [], setWorkouts, saveWorkouts,  }) => {
   const today = new Date();
   const currentMonth = today.getMonth() + 1;
   const currentYear = today.getFullYear();
-  
+
   const workoutMap = workoutData.reduce((acc, workout) => {
     const formattedDate = formatDate(workout.date);
     if (!acc[formattedDate]) {
@@ -33,17 +33,18 @@ const WorkoutCalendar = ({ workoutData = [], setWorkouts, saveWorkouts,  }) => {
     acc[formattedDate].push(workout);
     return acc;
   }, {});
-  
+
   const markedDates = workoutData.reduce((acc, workout) => {
     const formattedDate = formatDate(workout.date);
     const [year, month] = formattedDate.split('-');
-    const isCurrentMonth = parseInt(month, 10) === currentMonth && parseInt(year, 10) === currentYear;
+    const isCurrentMonth =
+      parseInt(month, 10) === currentMonth && parseInt(year, 10) === currentYear;
 
     acc[formattedDate] = {
       customStyles: {
         container: {
-          backgroundColor: isCurrentMonth ? 'rgba(0, 100, 0,0.7)' : '#d0f0d0', // Light green for other months
-          borderRadius: 4,
+          backgroundColor: isCurrentMonth ? 'rgba(0, 100, 0,0.7)' : '#d0f0d0',
+          borderRadius: 20,
         },
         text: {
           color: 'white',
@@ -57,8 +58,8 @@ const WorkoutCalendar = ({ workoutData = [], setWorkouts, saveWorkouts,  }) => {
   const calendarTheme = {
     backgroundColor: Colors[colorScheme].background,
     calendarBackground: Colors[colorScheme].background,
-    arrowColor: '#007bff',
-    monthTextColor: '#007bff',
+    arrowColor: '#4A90E2',
+    monthTextColor: '#4A90E2',
     textMonthFontWeight: 'bold',
     todayTextColor: '#4CAF50',
     textSectionTitleColor: '#424242',
@@ -70,105 +71,118 @@ const WorkoutCalendar = ({ workoutData = [], setWorkouts, saveWorkouts,  }) => {
 
   const handleWorkoutSelection = (day) => {
     const workouts = workoutMap[day.dateString];
-    setSelectedDate(day.dateString)
+    setSelectedDate(day.dateString);
     setSelectedWorkouts(workouts || []);
     setModalVisible(true);
   };
 
   const addWorkout = () => {
     const newWorkout = {
-        key: Date.now().toString(),
-        name: '',
-        //date: new Date().toLocaleDateString(),
-        date: selectedDate.toLocaleString(),
-        time: '',
-        exercises: [
+      key: Date.now().toString(),
+      name: '',
+      date: selectedDate.toLocaleString(),
+      time: '',
+      exercises: [
+        {
+          key: Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9),
+          name: '',
+          sets: [
             {
-                key: Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9),
-                name: '',
-                sets: [
-                    { reps: '', weight: '', key: `${Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9)}-1` },
-                ],
+              reps: '',
+              weight: '',
+              key: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-1`,
             },
-        ],
+          ],
+        },
+      ],
     };
-    
-    const updatedWorkouts = [newWorkout, ...workoutData,];
+
+    const updatedWorkouts = [newWorkout, ...workoutData];
     setWorkouts(updatedWorkouts);
     saveWorkouts(updatedWorkouts);
     setTimeout(() => {
       router.push({
-          pathname: '../modal',
-          params: { key: newWorkout.key, name: newWorkout.name },
+        pathname: '../modal',
+        params: { key: newWorkout.key, name: newWorkout.name },
       });
-  }, 0);
-};
+    }, 0);
+  };
 
   return (
     <View>
-    <Calendar
-      markingType="custom"
-      markedDates={markedDates}
-      theme={calendarTheme}
-      onDayPress={handleWorkoutSelection}
-    />
-    <Modal
-      visible={modalVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            {selectedWorkouts.length > 0 ? 'Select a Session' : 'No Workouts Found'}
-          </Text>
+      <Calendar
+        markingType="custom"
+        markedDates={markedDates}
+        theme={calendarTheme}
+        onDayPress={handleWorkoutSelection}
+      />
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {selectedWorkouts.length > 0 ? 'Select a Session' : 'No Workouts Found'}
+            </Text>
 
-          {selectedWorkouts.length > 0 ? (
-            selectedWorkouts.map((workout) => (
+            {selectedWorkouts.length > 0 ? (
+              <ScrollView style={styles.scrollViewContainer}>
+                {selectedWorkouts.map((workout) => (
+                  <TouchableOpacity
+                    key={workout.key}
+                    style={styles.workoutItem}
+                    onPress={() => {
+                      setModalVisible(false);
+                      router.push({
+                        pathname: '../modal',
+                        params: { key: workout.key, name: workout.name },
+                      });
+                    }}
+                  >
+                    <Text style={styles.workoutText}>{workout.name}</Text>
+                    <Text style={styles.workoutTime}>{workout.time}</Text>
+                    {workout.exercises &&
+                      workout.exercises.map((exercise) => (
+                        <View key={exercise.key} style={styles.exerciseContainer}>
+                          <Text style={styles.exerciseName}>{exercise.name}</Text>
+                          {exercise.sets &&
+                            exercise.sets.map((set) => (
+                              <Text key={set.key} style={styles.setInfo}>
+                                {`Reps: ${set.reps}, Weight: ${set.weight}`}
+                              </Text>
+                            ))}
+                        </View>
+                      ))}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.noWorkoutsText}>No workouts found for this date.</Text>
+            )}
+            <View style={styles.buttonRow}>
               <TouchableOpacity
-                key={workout.key}
-                style={styles.workoutItem}
+                style={[styles.createWorkoutButton, styles.buttonStyle]}
                 onPress={() => {
                   setModalVisible(false);
-                  router.push({
-                    pathname: '../modal',
-                    params: { key: workout.key, name: workout.name },
-                  });
+                  addWorkout();
                 }}
               >
-                <Text style={styles.workoutText}>{workout.name}</Text>
-                <Text style={styles.workoutTime}>{workout.time}</Text>
+                <Text style={styles.createWorkoutText}>Create New</Text>
               </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={styles.noWorkoutsText}>
-              No workouts found for this date.
-            </Text>
-          )}
-
-          {/* Create New Workout Button */}
-          <TouchableOpacity
-            style={styles.createWorkoutButton}
-            onPress={() => {
-              setModalVisible(false);
-              addWorkout();
-            }}
-          >
-            <Text style={styles.createWorkoutText}>Create New Workout</Text>
-          </TouchableOpacity>
-
-          {/* Cancel Button */}
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setModalVisible(false)}
-          >
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelButton, styles.buttonStyle]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </View>
-    </Modal>
-      </View>
+      </Modal>
+    </View>
   );
 };
 
@@ -181,10 +195,16 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '80%',
+    maxHeight: '80%',
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 10,
     alignItems: 'center',
+  },
+  scrollViewContainer: {
+    width: '100%',
+    // Adjust maxHeight as needed to control the scrollable area
+    maxHeight: 500,
   },
   modalTitle: {
     fontSize: 18,
@@ -194,60 +214,83 @@ const styles = StyleSheet.create({
   workoutItem: {
     width: '100%',
     padding: 12,
-    backgroundColor: '#007AFF',
+    backgroundColor: 'white',
+    borderColor: '#007bff',
+    borderWidth: 1,
     marginVertical: 5,
-    borderRadius: 5,
+    borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#000', // iOS shadow
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 2,
     elevation: 5,
   },
   workoutText: {
-    color: 'white',
+    color: '#007bff',
     fontWeight: 'bold',
     fontSize: 18,
   },
   workoutTime: {
     marginTop: 5,
-    color: 'white',
+    color: '#555',
     fontSize: 12,
   },
-  cancelButton: {
-    marginTop: 10,
+  exerciseContainer: {
     width: '100%',
+    marginTop: 10,
+    padding: 5,
+    borderTopWidth: 1,
+    borderColor: '#ccc',
+  },
+  exerciseName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  setInfo: {
+    fontSize: 14,
+    color: '#666',
+  },
+  noWorkoutsText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#999',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
+  },
+  buttonStyle: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  createWorkoutButton: {
+    padding: 10,
+    backgroundColor: 'transparent',
     borderRadius: 5,
     alignItems: 'center',
+  },
+  createWorkoutText: {
+    color: '#555',
+    textDecorationLine: 'underline',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  cancelButton: {
+    borderRadius: 5,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   cancelText: {
     color: 'red',
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  noWorkoutsText: {
-    fontSize: 16,
-    color: '#777',
-    marginBottom: 10,
-  },
-  createWorkoutButton: {
-    width: '100%',
-    padding: 12,
-    backgroundColor: '#28a745', // Green color for positive action
-    marginVertical: 5,
-    borderRadius: 5,
-    alignItems: 'center',
-    shadowColor: '#000', // iOS shadow
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 5,
-  },
-  createWorkoutText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
+    textDecorationLine: 'underline',
   },
 });
 
-export default WorkoutCalendar;
+export default WorkoutCalendar

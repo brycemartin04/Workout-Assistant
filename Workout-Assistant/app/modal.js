@@ -1,6 +1,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
-import { View, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  TextInput,
+  Button,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { getWorkouts, saveWorkouts } from '@/utils/storage';
@@ -132,14 +142,14 @@ export default function ModalScreen() {
 
   // Save the workout (either update an existing one or add a new one)
   const saveWorkout = async () => {
-    const originalWorkout =workouts.find(w => w.key === key)
+    const originalWorkout = workouts.find(w => w.key === key);
     
     // Build the new workout object
     const newWorkout = {
       key: key || Date.now().toString(),
       name: workoutName || 'New Training Session',
-      date: originalWorkout.date,
-      time: originalWorkout.time,
+      date: originalWorkout ? originalWorkout.date : new Date().toLocaleDateString(),
+      time: originalWorkout ? originalWorkout.time : new Date().toLocaleTimeString(),
       exercises: exercises.map(ex => ({
         ...ex,
         sets: ex.sets.map(s => ({
@@ -165,104 +175,109 @@ export default function ModalScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <ThemedView style={styles.nameView}>
-        <TextInput
-          style={styles.headInput}
-          value={workoutName}
-          onChangeText={setWorkoutName}
-          placeholder="Session Name"
-          autoFocus={workoutName === ''}
-        />
-      </ThemedView>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0} // adjust this value as needed
+    >
+      <ScrollView contentContainerStyle={styles.container}>
+        <ThemedView style={styles.nameView}>
+          <TextInput
+            style={styles.headInput}
+            value={workoutName}
+            onChangeText={setWorkoutName}
+            placeholder="Session Name"
+            autoFocus={workoutName === ''}
+          />
+        </ThemedView>
 
-      {exercises.map((exercise, idx) => (
-        <ThemedView key={exercise.key} style={styles.exerciseContainer}>
-          <View style={styles.exerciseHeader}>
-            <TextInput
-              style={styles.nameInput}
-              value={exercise.name}
-              onChangeText={(text) => updateExerciseName(exercise.key, text)}
-              placeholder="Add Exercise Name"
-            />
-            <TouchableOpacity onPress={() => toggleExerciseCollapse(exercise.key)} style={{marginBottom: 10}}>
-              <FontAwesome
-                name={collapsedExercises[exercise.key] ? "angle-down" : "angle-up"}
-                size={30}
-                color="#007AFF"
+        {exercises.map((exercise, idx) => (
+          <ThemedView key={exercise.key} style={styles.exerciseContainer}>
+            <View style={styles.exerciseHeader}>
+              <TextInput
+                style={styles.nameInput}
+                value={exercise.name}
+                onChangeText={(text) => updateExerciseName(exercise.key, text)}
+                placeholder="Add Exercise Name"
+                autoFocus={workoutName != '' && !exercise.name}
               />
-            </TouchableOpacity>
-          </View>
-          {!collapsedExercises[exercise.key] && (
-            <>
-              <View style={styles.setContainer}>
-                <ThemedText>Set</ThemedText>
-                <ThemedText>Reps</ThemedText>
-                <ThemedText>Weight</ThemedText>
-                <ThemedText>Remove</ThemedText>
-              </View>
-              {exercise.sets.map((set, setIdx) => (
-                <View key={set.key} style={styles.setContainer}>
-                  <View style={styles.set}>
-                    <ThemedText style={{fontSize: 18}}>{setIdx + 1}</ThemedText>
+              <TouchableOpacity onPress={() => toggleExerciseCollapse(exercise.key)} style={{ marginBottom: 10 }}>
+                <FontAwesome
+                  name={collapsedExercises[exercise.key] ? "angle-down" : "angle-up"}
+                  size={30}
+                  color="#007AFF"
+                />
+              </TouchableOpacity>
+            </View>
+            {!collapsedExercises[exercise.key] && (
+              <>
+                <View style={styles.setContainer}>
+                  <ThemedText>Set</ThemedText>
+                  <ThemedText>Reps</ThemedText>
+                  <ThemedText>Weight</ThemedText>
+                  <ThemedText>Remove</ThemedText>
+                </View>
+                {exercise.sets.map((set, setIdx) => (
+                  <View key={set.key} style={styles.setContainer}>
+                    <View style={styles.set}>
+                      <ThemedText style={{ fontSize: 18 }}>{setIdx + 1}</ThemedText>
+                    </View>
+                    <TextInput
+                      style={[styles.input, styles.setInput]}
+                      value={set.reps.toString()}
+                      onChangeText={(text) =>
+                        updateSet(exercise.key, set.key, 'reps', text.replace(/[^0-9]/g, ''))
+                      }
+                      placeholder="Reps"
+                      keyboardType="numeric"
+                    />
+                    <TextInput
+                      style={[styles.input, styles.setInput]}
+                      value={set.weight.toString()}
+                      onChangeText={(text) =>
+                        updateSet(exercise.key, set.key, 'weight', text.replace(/[^0-9]/g, ''))
+                      }
+                      placeholder="Weight"
+                      keyboardType="numeric"
+                    />
+                    <TouchableOpacity onPress={() => removeSetFromExercise(exercise.key, set.key)}>
+                      <FontAwesome name="remove" size={24} color="#EE0606" />
+                    </TouchableOpacity>
                   </View>
-                  <TextInput
-                    style={[styles.input, styles.setInput]}
-                    value={set.reps.toString()}
-                    onChangeText={(text) =>
-                      updateSet(exercise.key, set.key, 'reps', text.replace(/[^0-9]/g, ''))
-                    }
-                    placeholder="Reps"
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, styles.setInput]}
-                    value={set.weight.toString()}
-                    onChangeText={(text) =>
-                      updateSet(exercise.key, set.key, 'weight', text.replace(/[^0-9]/g, ''))
-                    }
-                    placeholder="Weight"
-                    keyboardType="numeric"
-                  />
-                  <TouchableOpacity onPress={() => removeSetFromExercise(exercise.key, set.key)}>
-                    <FontAwesome name="remove" size={24} color="#EE0606" />
+                ))}
+                <View style={{ flexDirection: 'row', flex: 1 }}>
+                  <TouchableOpacity onPress={() => removeExercise(exercise.key)} style={{ alignSelf: 'flex-start' }}>
+                    <FontAwesome name="trash" size={25} color="#555" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.setButton} onPress={() => addSetToExercise(exercise.key)}>
+                    <ThemedView style={styles.addSet}>
+                      <ThemedText style={styles.addSetTxt}>+ Add Set</ThemedText>
+                    </ThemedView>
                   </TouchableOpacity>
                 </View>
-              ))}
-              <View style={{flexDirection: 'row', flex: 1,}}>
-              <TouchableOpacity onPress={() => removeExercise(exercise.key)} style={{ alignSelf: 'flex-start' }}>
-              <FontAwesome name="trash" size={25} color="#555" />
-            </TouchableOpacity>
-              <TouchableOpacity style={styles.setButton} onPress={() => addSetToExercise(exercise.key)}>
-                <ThemedView style={styles.addSet}>
-                  <ThemedText style={styles.addSetTxt}>+ Add Set</ThemedText>
-                </ThemedView>
-              </TouchableOpacity>
-              </View>
-              
-            </>
-          )}
-        </ThemedView>
-      ))}
+              </>
+            )}
+          </ThemedView>
+        ))}
 
-      <TouchableOpacity style={styles.exerciseButton} onPress={addExercise}>
-        <ThemedView style={styles.addExercise}>
-          <ThemedText style={styles.addExerciseTxt}>+ Add Exercise</ThemedText>
-        </ThemedView>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.exerciseButton} onPress={addExercise}>
+          <ThemedView style={styles.addExercise}>
+            <ThemedText style={styles.addExerciseTxt}>+ Add Exercise</ThemedText>
+          </ThemedView>
+        </TouchableOpacity>
 
-      {/* <Button title="Close" onPress={() => router.back()} /> */}
-      <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
-        <ThemedView style={styles.save}>
-          {key && <ThemedText style={styles.saveTxt}>Save Changes</ThemedText>}
-        </ThemedView>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.deleteButton} onPress={deleteWorkout}>
-        <ThemedView style={styles.delete}>
-          {key && <ThemedText style={styles.deleteTxt}>Delete Workout</ThemedText>}
-        </ThemedView>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
+          <ThemedView style={styles.save}>
+            {key && <ThemedText style={styles.saveTxt}>Save Changes</ThemedText>}
+          </ThemedView>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={deleteWorkout}>
+          <ThemedView style={styles.delete}>
+            {key && <ThemedText style={styles.deleteTxt}>Delete Workout</ThemedText>}
+          </ThemedView>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -290,6 +305,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     padding: 5,
     marginBottom: 10,
+    color: '#4A90E2',
   },
   exerciseContainer: {
     width: '100%',
@@ -312,7 +328,7 @@ const styles = StyleSheet.create({
     padding: 5,
     marginBottom: 10,
     flex: 1,
-    color: "#007bff"
+    color: "#4A90E2"
   },
   setContainer: {
     flexDirection: 'row',
@@ -336,7 +352,6 @@ const styles = StyleSheet.create({
   },
   setButton: {
     width: '100%',
-    
   },
   addSet: {
     backgroundColor: 'rgba(85,85,85,.3)',
@@ -380,7 +395,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   save: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#4A90E2',
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 10,
@@ -401,20 +416,15 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   delete: {
-    backgroundColor: 'rgba(255, 0, 0, 0.5)',
+    backgroundColor: 'transparent',
     paddingVertical: 5,
     paddingHorizontal: 5,
     borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
   },
   deleteTxt: {
-    fontSize: 15,
-    color: '#fff',
-    fontWeight: 'bold',
+    fontSize: 18,
+    color: 'red',
+    textDecorationLine: 'underline',
   },
 });
