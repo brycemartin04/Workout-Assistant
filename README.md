@@ -24,8 +24,7 @@ Workout Assistant is a mobile application designed to help users track their wor
 - Enhanced AI model for better workout suggestions
 - UI/UX improvements for a seamless user experience
 
-## Contributing
-Contributions are welcome! Feel free to fork the repository and submit a pull request.
+![Workout Assistant in Action](Workout-Assistant/assets/MyMovie-ezgif.com-crop.gif) 
 
 ## License
 This project is licensed under the MIT License.
